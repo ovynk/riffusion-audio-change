@@ -26,15 +26,14 @@ def split_video(video_path, splits):
         return
 
     splits_names = []
+
     video = VideoFileClip(video_path)
     duration = video.duration
     duration_of_split = duration / splits
 
     clip = None
     for i, time in enumerate(np.arange(0.0, duration, duration_of_split)):
-        print('Time', time)
-
-        split_name = f"split_{i+1}_{video_path}"
+        split_name = f"split_{i}.mp4"
         splits_names.append(split_name)
 
         clip = video.subclip(time, time+duration_of_split)

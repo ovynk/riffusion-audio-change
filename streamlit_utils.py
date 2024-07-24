@@ -7,6 +7,7 @@ import streamlit as st
 from video_process import write_bytesio_to_file
 
 
+# I don't have GPU, so running on GPU can be not proper
 def select_device(container: T.Any = st.sidebar) -> str:
     """
     Dropdown to select a torch device, with an intelligent default.

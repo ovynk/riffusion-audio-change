@@ -1,3 +1,5 @@
+import os
+
 from model import Model
 from utils import get_files_by_regex
 from streamlit_utils import *
@@ -32,16 +34,9 @@ def render() -> None:
 
         number_of_clips = T.cast(int, st.number_input("Number of clips", value=2))
 
-        number_change_clip = T.cast(int, st.number_input("Number of the clip you want to change audio", value=2))
+        number_change_clip = T.cast(int, st.number_input("Number of the clip you want to change audio", value=0))
 
         uploaded_file = upload_file(name='uploaded_file.mp4')
-
-        columns_options = [1, 2, 3, 4]
-        number_of_clips_to_show = st.selectbox(
-            "How many clips to show",
-            options=columns_options,
-            index=1,
-        )
 
         submit_button = st.form_submit_button("Generate", type="primary")
 
@@ -52,10 +47,9 @@ def render() -> None:
             if number_of_clips < 1:
                 st.info("Number of clips cannot be lower than 1")
                 return
-            if number_change_clip > number_of_clips or number_change_clip < 1:
+            if number_change_clip >= number_of_clips or number_change_clip < 0:
                 st.info(
-                    f"Number of clip you want to change must be lower "
-                    f"or equal to {number_of_clips} and higher than 0"
+                    f"Number of clip you want to change must be N < {number_of_clips} and N >= 0"
                 )
                 return
             if uploaded_file is None:
@@ -69,10 +63,25 @@ def render() -> None:
                 return
 
             if uploaded_file is not None:
-                splits_names = split_video('uploaded_file.mp4', number_of_clips)
-                clip_to_change_name = splits_names[number_change_clip - 1]
+                # remove all mp4 zip wav files except uploaded_file.mp4
+                previous_processing_files = get_files_by_regex(
+                    regex=r'(split_.*\.mp4)|(.+\.zip)|(.+\.wav)',
+                    directory=os.path.curdir
+                )
+                if previous_processing_files:
+                    for f in previous_processing_files:
+                        os.remove(f)
 
-                duration_split = VideoFileClip(clip_to_change_name).duration  # seconds
+                # if number of clips 1 the whole video is changed
+                if number_of_clips == 1:
+                    os.rename('uploaded_file.mp4', 'split_full_video.mp4')
+                    splits_names = ['split_full_video.mp4']
+                else:
+                    splits_names = split_video('uploaded_file.mp4', number_of_clips)
+
+                clip_to_change = splits_names[number_change_clip]
+
+                duration_split = VideoFileClip(clip_to_change).duration  # seconds
 
                 model.txt2spectrogram(
                     audio_duration=duration_split,
@@ -85,9 +94,9 @@ def render() -> None:
 
                 model.spectrogram2audio(use_20khz=use_20khz)
 
-                set_audio_to_video(audio_path='generated_audio.wav', video_path=clip_to_change_name)
+                set_audio_to_video(audio_path='generated_audio.wav', video_path=clip_to_change)
 
-    current_dir = os.path.dirname(os.path.realpath(__file__))
+    current_dir = os.path.curdir
     splits_names = get_files_by_regex(r'(split_).*(\.mp4)', current_dir)
 
     if splits_names:
@@ -97,6 +106,13 @@ def render() -> None:
                 list(range(i, i + len(li[i:i + chunk_size]))) for i in range(0, len(li), chunk_size)
             ]
             return grouped_to_string_indexes
+
+        columns_options = [1, 2, 3, 4]
+        number_of_clips_to_show = st.selectbox(
+            "How many clips to show",
+            options=columns_options,
+            index=1,
+        )
 
         grouped_indexes_of_splits_names = group_indexes_of_list(splits_names, number_of_clips_to_show)
         splits_to_show = st.selectbox(
