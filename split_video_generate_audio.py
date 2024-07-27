@@ -27,12 +27,23 @@ def render() -> None:
 
         use_20khz = st.checkbox("Use 20kHz", value=False)
 
-    st.subheader("Split and generate audio")
+    st.subheader("Split video and generate audio")
+    st.write("Upload your video. If needed split it for equal size clips. \n"
+             "And generate new audio with text prompt using riffusion model \n"
+             "https://huggingface.co/riffusion/riffusion-model-v1")
 
     with st.form("Inputs"):
         prompt = st.text_input("Prompt", value="piano in the sky")
 
-        number_of_clips = T.cast(int, st.number_input("Number of clips", value=2))
+        number_of_clips = T.cast(int,
+                                 st.number_input(
+                                     "Number of clips",
+                                     value=2,
+                                     help="If number of clips is set to 1 or 0, "
+                                          "it means the whole video is changed. \n"
+                                          "If it's 2 video will be split in 2 clips, "
+                                          "if 3 there will be 3 clips and so on.")
+                                 )
 
         number_change_clip = T.cast(int, st.number_input("Number of the clip you want to change audio", value=0))
 
@@ -40,18 +51,18 @@ def render() -> None:
 
         submit_button = st.form_submit_button("Generate", type="primary")
 
+        # Check all inputs if they are correct
         if submit_button:
             if not prompt:
                 st.info("Enter a prompt")
                 return
-            if number_of_clips < 1:
-                st.info("Number of clips cannot be lower than 1")
+            if number_of_clips < 0:
+                st.info("Number of clips cannot be lower than 0")
                 return
-            if number_change_clip >= number_of_clips or number_change_clip < 0:
-                st.info(
-                    f"Number of clip you want to change must be N < {number_of_clips} and N >= 0"
-                )
-                return
+            if number_of_clips not in [0, 1]:
+                if number_change_clip >= number_of_clips or number_change_clip < 0:
+                    st.info(f"Number of clip you want to change must be 0 <= N < {number_of_clips}")
+                    return
             if uploaded_file is None:
                 st.info("Upload video file")
                 return
@@ -72,10 +83,12 @@ def render() -> None:
                     for f in previous_processing_files:
                         os.remove(f)
 
-                # if number of clips 1 the whole video is changed
-                if number_of_clips == 1:
+                # if number of clips 1 or 0 the whole video is changed
+                if number_of_clips in [0, 1]:
                     os.rename('uploaded_file.mp4', 'split_full_video.mp4')
                     splits_names = ['split_full_video.mp4']
+
+                    number_change_clip = 0
                 else:
                     splits_names = split_video('uploaded_file.mp4', number_of_clips)
 
@@ -100,7 +113,7 @@ def render() -> None:
     splits_names = get_files_by_regex(r'(split_).*(\.mp4)', current_dir)
 
     if splits_names:
-
+        # It's needed only for show_videos function below
         def group_indexes_of_list(li, chunk_size):
             grouped_to_string_indexes = [
                 list(range(i, i + len(li[i:i + chunk_size]))) for i in range(0, len(li), chunk_size)

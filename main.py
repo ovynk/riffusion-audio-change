@@ -11,7 +11,7 @@ from utils import get_files_by_regex
 
 def render() -> None:
     st.set_page_config(
-        page_title="Split and generate audio",
+        page_title="riffusion-audio-change",
         layout="centered",
     )
 
@@ -23,6 +23,10 @@ def render() -> None:
 
 @st.experimental_singleton
 def remove_previous_session_files():
+    """
+    Remove previous session created or uploaded
+    files only one time in the beginning.
+    """
     previous_session_files = get_files_by_regex(
         regex=r'(.+\.mp4)|(.+\.zip)|(.+\.wav)',
         directory=os.path.curdir
