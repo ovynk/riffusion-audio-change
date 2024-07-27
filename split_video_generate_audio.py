@@ -51,7 +51,7 @@ def render() -> None:
 
         submit_button = st.form_submit_button("Generate", type="primary")
 
-        # Check all inputs if they are correct
+        # Check all inputs whether they are correct
         if submit_button:
             if not prompt:
                 st.info("Enter a prompt")
